@@ -15,7 +15,7 @@ export default function Home() {
   const [globalConfig, setGlobalConfig] = useState<ImageConfig>({
     quality: 0.8,
     scale: 1,
-    format: 'image/png'
+    format: 'image/jpeg'
   });
   const [isProcessingAll, setIsProcessingAll] = useState(false);
 
@@ -221,7 +221,11 @@ export default function Home() {
         <div className="container mx-auto py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-black text-white flex items-center justify-center font-bold text-2xl">
-              <img src="/images/logo.png" alt="Logo" className="w-full h-full object-contain" />
+              <img
+                src={`${import.meta.env.BASE_URL}images/logo.png`}
+                alt="Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div className="h-12 flex items-center">
               <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">安久图片处理工具</h1>
@@ -308,7 +312,7 @@ export default function Home() {
                       </SelectTrigger>
                       <SelectContent className="border-2 border-black rounded-none">
                         <SelectItem value="image/jpeg">JPEG (标准)</SelectItem>
-                        <SelectItem value="image/png">PNG (无损)</SelectItem>
+                        {/* <SelectItem value="image/png">PNG (无损)</SelectItem> */}
                         <SelectItem value="image/png-lossy">PNG (有损/索引色)</SelectItem>
                       </SelectContent>
                     </Select>
