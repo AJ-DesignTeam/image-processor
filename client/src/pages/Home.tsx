@@ -80,6 +80,21 @@ export default function Home() {
     }));
   };
 
+  const updateItemFormatOverride = (id: string, formatOverride: ImageConfig["format"] | null) => {
+    setItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+
+      const effectiveFormat = formatOverride ?? globalConfig.format;
+
+      return {
+        ...item,
+        formatOverride,
+        config: { ...item.config, format: effectiveFormat },
+        status: 'pending',
+      };
+    }));
+  };
+
   const removeItem = (id: string) => {
     setItems(prev => {
       const item = prev.find(i => i.id === id);
@@ -204,14 +219,27 @@ export default function Home() {
   };
 
   // Update global config affects all pending items
+  // Note: 单图 formatOverride 的优先级高于全局设置
   const updateGlobalConfig = (config: Partial<ImageConfig>) => {
     const newConfig = { ...globalConfig, ...config };
     setGlobalConfig(newConfig);
-    setItems(prev => prev.map(item => ({
-      ...item,
-      config: { ...item.config, ...config },
-      status: 'pending' // Reset status to trigger re-process if needed
-    })));
+
+    const { format, ...rest } = config;
+
+    setItems(prev => prev.map(item => {
+      const nextConfig = { ...item.config, ...rest };
+
+      // 只有当本图没有单图覆盖时，才同步全局 format
+      if (format && item.formatOverride !== "image/jpeg") {
+        nextConfig.format = format;
+      }
+
+      return {
+        ...item,
+        config: nextConfig,
+        status: 'pending', // Reset status to trigger re-process if needed
+      };
+    }));
   };
 
   return (
@@ -381,6 +409,7 @@ export default function Home() {
                         onRemove={removeItem}
                         onDownload={downloadItem}
                         onConfigChange={updateItemConfig}
+                        onFormatOverrideChange={updateItemFormatOverride}
                       />
                     ))}
                   </div>

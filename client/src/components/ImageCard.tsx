@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBytes } from "@/lib/utils";
 import { Download, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { ImageConfig, ProcessedImage } from "@/lib/imageProcessing";
@@ -16,6 +17,8 @@ export interface ImageItem {
   processed?: ProcessedImage;
   error?: string;
   config: ImageConfig;
+  /** 单图覆盖：当为 image/jpeg 时，本图忽略全局格式设置 */
+  formatOverride?: ImageConfig["format"] | null;
   hasTransparency?: boolean;
 }
 
@@ -24,9 +27,10 @@ interface ImageCardProps {
   onRemove: (id: string) => void;
   onDownload: (id: string) => void;
   onConfigChange: (id: string, config: Partial<ImageConfig>) => void;
+  onFormatOverrideChange: (id: string, formatOverride: ImageConfig["format"] | null) => void;
 }
 
-export function ImageCard({ item, onRemove, onDownload, onConfigChange }: ImageCardProps) {
+export function ImageCard({ item, onRemove, onDownload, onFormatOverrideChange }: ImageCardProps) {
   const isProcessing = item.status === 'processing';
   const isDone = item.status === 'done';
   const isError = item.status === 'error';
@@ -40,6 +44,12 @@ export function ImageCard({ item, onRemove, onDownload, onConfigChange }: ImageC
     ? ((item.processed.size - item.file.size) / item.file.size) * 100
     : 0;
 
+  const alphaCapableTypes = new Set(["image/png", "image/gif", "image/webp"]);
+  const isAlphaCapable = alphaCapableTypes.has(item.file.type);
+  const hasTransparency = item.hasTransparency === true;
+  const suggestJpg = isAlphaCapable && item.hasTransparency === false;
+  const showJpegFormatSelector = suggestJpg || item.formatOverride === "image/jpeg";
+
   return (
     <Card className="overflow-hidden border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
       <CardContent className="p-0">
@@ -50,35 +60,26 @@ export function ImageCard({ item, onRemove, onDownload, onConfigChange }: ImageC
             className="max-h-full max-w-full object-contain"
           />
 
-          {(() => {
-            const alphaCapableTypes = new Set(["image/png", "image/gif", "image/webp"]);
-            const isAlphaCapable = alphaCapableTypes.has(item.file.type);
-            const hasTransparency = item.hasTransparency === true;
-            const suggestJpg = isAlphaCapable && item.hasTransparency === false;
-
-            if (!hasTransparency && !suggestJpg) return null;
-
-            return (
-              <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-                {hasTransparency && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-white/80 backdrop-blur-sm border border-black text-black"
-                  >
-                    含透明像素
-                  </Badge>
-                )}
-                {suggestJpg && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-white/80 backdrop-blur-sm border border-black text-black"
-                  >
-                    建议转成 JPG
-                  </Badge>
-                )}
-              </div>
-            );
-          })()}
+          {(hasTransparency || suggestJpg) && (
+            <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+              {hasTransparency && (
+                <Badge
+                  variant="secondary"
+                  className="bg-white/80 backdrop-blur-sm border border-black text-black"
+                >
+                  含透明像素
+                </Badge>
+              )}
+              {suggestJpg && (
+                <Badge
+                  variant="secondary"
+                  className="bg-white/80 backdrop-blur-sm border border-black text-black"
+                >
+                  建议转成 JPG
+                </Badge>
+              )}
+            </div>
+          )}
 
           {isProcessing && (
             <div className="absolute inset-0 bg-white/50 flex items-center justify-center backdrop-blur-sm">
@@ -119,6 +120,38 @@ export function ImageCard({ item, onRemove, onDownload, onConfigChange }: ImageC
               </div>
             </div>
           </div>
+
+          {showJpegFormatSelector && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-black">输出格式</span>
+                {item.formatOverride === "image/jpeg" && (
+                  <Badge variant="secondary" className="bg-white border border-black text-black">
+                    本图已选 JPG
+                  </Badge>
+                )}
+              </div>
+              <Select
+                value={item.formatOverride === "image/jpeg" ? "image/jpeg" : "global"}
+                onValueChange={(val) => {
+                  onFormatOverrideChange(item.id, val === "global" ? null : (val as ImageConfig["format"]));
+                }}
+              >
+                <SelectTrigger className="border border-black rounded-none h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border border-black rounded-none">
+                  <SelectItem value="global">跟随全局</SelectItem>
+                  <SelectItem value="image/jpeg">使用 JPEG（建议）</SelectItem>
+                </SelectContent>
+              </Select>
+              {suggestJpg && (
+                <p className="text-[11px] text-muted-foreground">
+                  该图片无透明像素，转成 JPG 通常更小。
+                </p>
+              )}
+            </div>
+          )}
 
           {isError && (
             <div className="text-destructive text-xs flex items-center gap-1 font-bold">
