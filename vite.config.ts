@@ -152,41 +152,49 @@ function vitePluginManusDebugCollector(): Plugin {
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
 
-export default defineConfig(({ mode }) => ({
-  // GitHub Pages 会把站点挂在 /<repo>/ 子路径下，所以生产构建需要设置 base
-  // 你的仓库名是 image-processor，因此这里使用 /image-processor/
-  base: mode === "production" ? "/image-processor/" : "/",
+export default defineConfig(({ mode }) => {
+  // GitHub Pages 的 base 分两种：
+  // - 仓库 Pages: https://<user>.github.io/<repo>/  => base = /<repo>/
+  // - 用户/组织 Pages: https://<user>.github.io/      => base = /
+  // 在 Actions 里可从 GITHUB_REPOSITORY 推断 repo 名；也允许用 VITE_BASE 手动覆盖。
+  const repo = process.env.GITHUB_REPOSITORY?.split("/")[1];
+  const isUserOrOrgPages = !!repo && repo.endsWith(".github.io");
+  const inferredBase = repo && !isUserOrOrgPages ? `/${repo}/` : "/";
+  const base = mode === "production" ? (process.env.VITE_BASE || inferredBase) : "/";
 
-  plugins,
-  resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+  return {
+    base,
+    plugins,
+    resolve: {
+      alias: {
+        "@": path.resolve(import.meta.dirname, "client", "src"),
+        "@shared": path.resolve(import.meta.dirname, "shared"),
+        "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      },
     },
-  },
-  envDir: path.resolve(import.meta.dirname),
-  root: path.resolve(import.meta.dirname, "client"),
-  build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
-    emptyOutDir: true,
-  },
-  server: {
-    port: 3000,
-    strictPort: false, // Will find next available port if 3000 is busy
-    host: true,
-    allowedHosts: [
-      ".manuspre.computer",
-      ".manus.computer",
-      ".manus-asia.computer",
-      ".manuscomputer.ai",
-      ".manusvm.computer",
-      "localhost",
-      "127.0.0.1",
-    ],
-    fs: {
-      strict: true,
-      deny: ["**/.*"],
+    envDir: path.resolve(import.meta.dirname),
+    root: path.resolve(import.meta.dirname, "client"),
+    build: {
+      outDir: path.resolve(import.meta.dirname, "dist/public"),
+      emptyOutDir: true,
     },
-  },
-}));
+    server: {
+      port: 3000,
+      strictPort: false, // Will find next available port if 3000 is busy
+      host: true,
+      allowedHosts: [
+        ".manuspre.computer",
+        ".manus.computer",
+        ".manus-asia.computer",
+        ".manuscomputer.ai",
+        ".manusvm.computer",
+        "localhost",
+        "127.0.0.1",
+      ],
+      fs: {
+        strict: true,
+        deny: ["**/.*"],
+      },
+    },
+  };
+});
