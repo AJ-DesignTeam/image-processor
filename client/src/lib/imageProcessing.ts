@@ -3,7 +3,7 @@ import UPNG from 'upng-js';
 export interface ImageConfig {
   quality: number; // 0-1 (mapped from 10-100%)
   scale: number; // 0.1-2.0 (mapped from 10-200%)
-  format: 'original' | 'image/jpeg' | 'image/png' | 'image/png-lossy';
+  format: 'original' | 'image/jpeg' | 'image/png' | 'image/png-lossy' | 'image/webp';
 }
 
 export interface ProcessedImage {
@@ -65,7 +65,7 @@ export const processImage = async (
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, targetWidth, targetHeight);
   }
-  
+
   ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
   // Determine output format
@@ -73,7 +73,7 @@ export const processImage = async (
   if (outputFormat === 'original') {
     outputFormat = file.type as any;
     // Fallback for unsupported types to PNG
-    if (!['image/jpeg', 'image/png'].includes(outputFormat)) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(outputFormat)) {
       outputFormat = 'image/png';
     }
   }
@@ -97,14 +97,14 @@ export const processImage = async (
     else if (q <= 0.6) cnum = 32;
     else if (q <= 0.8) cnum = 64;
     else if (q <= 0.95) cnum = 128;
-    
+
     const pngBuffer = UPNG.encode([imageData.data.buffer], targetWidth, targetHeight, cnum);
     blob = new Blob([pngBuffer], { type: 'image/png' });
   } else {
     // Standard Canvas export
     // Note: quality parameter only works for image/jpeg and image/webp
-    const quality = outputFormat === 'image/jpeg' ? config.quality : undefined;
-    
+    const quality = (outputFormat === 'image/jpeg' || outputFormat === 'image/webp') ? config.quality : undefined;
+
     blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
         (b) => {

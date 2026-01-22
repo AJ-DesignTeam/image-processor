@@ -23,7 +23,7 @@ export default function Home() {
   const onDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
     await handleFiles(files);
   }, [globalConfig]);
@@ -46,7 +46,7 @@ export default function Home() {
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
         let isTransparent = false;
-        
+
         if (ctx) {
           ctx.drawImage(img, 0, 0);
           isTransparent = hasTransparency(ctx, img.width, img.height);
@@ -121,18 +121,18 @@ export default function Home() {
 
     try {
       const processed = await processImage(item.file, item.config);
-      setItems(prev => prev.map(i => i.id === item.id ? { 
-        ...i, 
-        status: 'done', 
+      setItems(prev => prev.map(i => i.id === item.id ? {
+        ...i,
+        status: 'done',
         processed,
         error: undefined
       } : i));
     } catch (err) {
       console.error('Processing error:', err);
-      setItems(prev => prev.map(i => i.id === item.id ? { 
-        ...i, 
-        status: 'error', 
-        error: err instanceof Error ? err.message : 'Unknown error' 
+      setItems(prev => prev.map(i => i.id === item.id ? {
+        ...i,
+        status: 'error',
+        error: err instanceof Error ? err.message : 'Unknown error'
       } : i));
     }
   };
@@ -140,7 +140,7 @@ export default function Home() {
   const processAll = async () => {
     setIsProcessingAll(true);
     const pendingItems = items.filter(i => i.status !== 'done');
-    
+
     for (const item of pendingItems) {
       await processItem(item);
     }
@@ -161,26 +161,26 @@ export default function Home() {
     // Actually, processItem updates state, but we can't access new state immediately here.
     // So we should probably just re-process or wait for state update.
     // For simplicity, let's just re-process if not done, or use the processed blob if done.
-    
+
     // Better approach:
     // If it was already done, use it. If not, process it and use the result directly.
     let blob = item.processed?.blob;
-    let extension = item.config.format === 'image/jpeg' ? 'jpg' : 'png';
-    
+    let extension = item.config.format === 'image/jpeg' ? 'jpg' : item.config.format === 'image/webp' ? 'webp' : 'png';
+
     if (item.config.format === 'original') {
-       extension = item.file.name.split('.').pop() || 'png';
+      extension = item.file.name.split('.').pop() || 'png';
     }
 
     if (!blob) {
-       try {
-         const res = await processImage(item.file, item.config);
-         blob = res.blob;
-         // Update state too
-         setItems(prev => prev.map(i => i.id === id ? { ...i, status: 'done', processed: res } : i));
-       } catch (e) {
-         toast.error('处理图片下载失败');
-         return;
-       }
+      try {
+        const res = await processImage(item.file, item.config);
+        blob = res.blob;
+        // Update state too
+        setItems(prev => prev.map(i => i.id === id ? { ...i, status: 'done', processed: res } : i));
+      } catch (e) {
+        toast.error('处理图片下载失败');
+        return;
+      }
     }
 
     saveAs(blob, `processed_${item.file.name.split('.')[0]}.${extension}`);
@@ -192,9 +192,9 @@ export default function Home() {
 
     for (const item of items) {
       let blob = item.processed?.blob;
-      let extension = item.config.format === 'image/jpeg' ? 'jpg' : 'png';
+      let extension = item.config.format === 'image/jpeg' ? 'jpg' : item.config.format === 'image/webp' ? 'webp' : 'png';
       if (item.config.format === 'original') {
-         extension = item.file.name.split('.').pop() || 'png';
+        extension = item.file.name.split('.').pop() || 'png';
       }
 
       if (!blob) {
@@ -213,7 +213,7 @@ export default function Home() {
       // Small delay to prevent browser blocking
       await new Promise(resolve => setTimeout(resolve, 150));
     }
-    
+
     setIsProcessingAll(false);
     toast.success(`已下载 ${processedCount} 张图片`);
   };
@@ -302,10 +302,10 @@ export default function Home() {
                         {Math.round(globalConfig.quality * 100)}%
                       </span>
                     </div>
-                    <Slider 
-                      value={[globalConfig.quality]} 
-                      min={0.1} 
-                      max={1} 
+                    <Slider
+                      value={[globalConfig.quality]}
+                      min={0.1}
+                      max={1}
                       step={0.05}
                       onValueChange={([val]) => updateGlobalConfig({ quality: val })}
                       className="py-2"
@@ -319,10 +319,10 @@ export default function Home() {
                         {Math.round(globalConfig.scale * 100)}%
                       </span>
                     </div>
-                    <Slider 
-                      value={[globalConfig.scale]} 
-                      min={0.1} 
-                      max={2} 
+                    <Slider
+                      value={[globalConfig.scale]}
+                      min={0.1}
+                      max={2}
                       step={0.1}
                       onValueChange={([val]) => updateGlobalConfig({ scale: val })}
                       className="py-2"
@@ -331,8 +331,8 @@ export default function Home() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold uppercase">格式</label>
-                    <Select 
-                      value={globalConfig.format} 
+                    <Select
+                      value={globalConfig.format}
                       onValueChange={(val: any) => updateGlobalConfig({ format: val })}
                     >
                       <SelectTrigger className="border-2 border-black font-bold rounded-none focus:ring-0 focus:ring-offset-0">
@@ -342,13 +342,14 @@ export default function Home() {
                         <SelectItem value="image/jpeg">JPEG (标准)</SelectItem>
                         {/* <SelectItem value="image/png">PNG (无损)</SelectItem> */}
                         <SelectItem value="image/png-lossy">PNG (有损/索引色)</SelectItem>
+                        <SelectItem value="image/webp">WebP (现代格式)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 <div className="mt-8 flex flex-col gap-3">
-                  <Button 
+                  <Button
                     className="w-full bg-black text-white hover:bg-primary border-2 border-black font-bold rounded-none h-12 text-lg shadow-[4px_4px_0px_0px_rgba(100,100,100,0.5)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
                     onClick={processAll}
                     disabled={isProcessingAll || items.length === 0}
@@ -356,7 +357,7 @@ export default function Home() {
                     {isProcessingAll ? <RefreshCw className="w-5 h-5 mr-2 animate-spin" /> : <Settings2 className="w-5 h-5 mr-2" />}
                     全部处理
                   </Button>
-                  <Button 
+                  <Button
                     className="w-full bg-white text-black hover:bg-gray-100 border-2 border-black font-bold rounded-none h-12 text-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
                     onClick={downloadAll}
                     disabled={items.length === 0}
@@ -364,8 +365,8 @@ export default function Home() {
                     <Download className="w-5 h-5 mr-2" />
                     全部下载
                   </Button>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full text-primary hover:bg-primary/10 hover:text-primary font-bold uppercase text-xs tracking-widest"
                     onClick={clearAll}
                     disabled={items.length === 0}
@@ -378,7 +379,7 @@ export default function Home() {
 
             {/* Upload Area / Stats */}
             <div className="lg:col-span-8 flex flex-col">
-              <div 
+              <div
                 className={`flex-1 border-4 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center p-12 transition-colors ${items.length === 0 ? 'bg-white' : 'bg-transparent border-transparent p-0'}`}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 onDrop={onDrop}
@@ -392,8 +393,8 @@ export default function Home() {
                     <p className="text-gray-500 font-medium">
                       支持 JPG, PNG, WebP。所有处理均在本地浏览器完成。
                     </p>
-                    <Button 
-                      size="lg" 
+                    <Button
+                      size="lg"
                       className="bg-black text-white hover:bg-gray-800 font-bold px-8 py-6 text-lg rounded-full"
                       onClick={() => document.getElementById('file-upload')?.click()}
                     >
@@ -403,9 +404,9 @@ export default function Home() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
                     {items.map(item => (
-                      <ImageCard 
-                        key={item.id} 
-                        item={item} 
+                      <ImageCard
+                        key={item.id}
+                        item={item}
                         onRemove={removeItem}
                         onDownload={downloadItem}
                         onConfigChange={updateItemConfig}
